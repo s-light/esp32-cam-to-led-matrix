@@ -1,0 +1,477 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 1020" font-family="monospace" font-size="11">
+  <defs>
+    <style>
+      text { font-family: monospace; }
+      .pin-gpio  { fill: #FF8C00; }
+      .pin-pwr   { fill: #CC0000; }
+      .pin-gnd   { fill: #222222; }
+      .pin-cam   { fill: #008B8B; }
+      .pin-adc   { fill: #228B22; }
+      .pin-touch { fill: #800080; }
+      .pin-serial{ fill: #4169E1; }
+      .pin-led   { fill: #1E90FF; }
+      .pin-sd    { fill: #008B8B; }
+      .pin-psram { fill: #6A0DAD; }
+      .pin-ws    { fill: #FF1493; }
+      .pin-jtag  { fill: #2E8B57; }
+      .pin-usb   { fill: #9ACD32; }
+      .pin-strap { fill: #FF8C00; }
+      .pin-reset { fill: #DAA520; }
+      .label-white { fill: white; font-size: 10px; font-weight: bold; }
+      .label-black { fill: black; font-size: 10px; }
+      .board { fill: #1a472a; stroke: #0d2b16; stroke-width: 2; }
+      .connector { fill: #111; stroke: #444; stroke-width: 1; }
+      .pin-line { stroke: #555; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1100" height="1020" fill="#e8f4f8"/>
+
+  <!-- Title -->
+  <text x="550" y="28" text-anchor="middle" font-size="18" font-weight="bold" fill="#1a1a2e">ESP32-S3-CAM Pinout</text>
+
+  <!-- Board body -->
+  <rect x="340" y="40" width="260" height="820" rx="12" class="board"/>
+
+  <!-- Camera module -->
+  <rect x="390" y="130" width="160" height="120" rx="4" fill="#2a5a3a" stroke="#444" stroke-width="1"/>
+  <circle cx="470" cy="190" r="28" fill="#111" stroke="#888" stroke-width="2"/>
+  <circle cx="470" cy="190" r="18" fill="#222" stroke="#666" stroke-width="1"/>
+  <circle cx="470" cy="190" r="10" fill="#1a3a5a"/>
+  <text x="470" y="274" text-anchor="middle" fill="#aaa" font-size="9">OV2640</text>
+
+  <!-- FPC connector -->
+  <rect x="405" y="270" width="130" height="20" rx="2" fill="#333" stroke="#666"/>
+  <text x="470" y="283" text-anchor="middle" fill="#aaa" font-size="8">FPC</text>
+
+  <!-- Chip -->
+  <rect x="385" y="460" width="170" height="100" rx="4" fill="#2a2a2a" stroke="#555"/>
+  <text x="470" y="506" text-anchor="middle" fill="#ccc" font-size="10" font-weight="bold">ESP32-S3-CAM</text>
+
+  <!-- USB-C connector -->
+  <rect x="430" y="820" width="80" height="22" rx="4" fill="#555" stroke="#888"/>
+  <text x="470" y="835" text-anchor="middle" fill="#ccc" font-size="8">USB-C</text>
+  <text x="395" y="835" text-anchor="middle" fill="#aaa" font-size="8">OTG</text>
+  <text x="545" y="835" text-anchor="middle" fill="#aaa" font-size="8">TTL</text>
+
+  <!-- BOOT button -->
+  <rect x="430" y="770" width="30" height="14" rx="3" fill="#333" stroke="#888"/>
+  <text x="445" y="780" text-anchor="middle" fill="#ccc" font-size="7">BOOT</text>
+
+  <!-- RST button -->
+  <rect x="380" y="858" width="30" height="14" rx="3" fill="#333" stroke="#888"/>
+  <text x="395" y="869" text-anchor="middle" fill="#ccc" font-size="7">RST</text>
+
+  <!-- Left header pins (board side) -->
+  <rect x="340" y="56" width="12" height="770" fill="#111" stroke="#444"/>
+
+  <!-- Right header pins (board side) -->
+  <rect x="588" y="56" width="12" height="770" fill="#111" stroke="#444"/>
+
+  <!-- Antenna area -->
+  <rect x="420" y="50" width="100" height="22" rx="3" fill="#333" stroke="#888"/>
+  <text x="470" y="64" text-anchor="middle" fill="#ccc" font-size="8">WiFi Antenna</text>
+
+  <!-- ==== LEFT SIDE PINS ==== -->
+  <!-- Each row: y position, gpio label, fn1, fn2, fn3, color classes -->
+
+  <!-- Helper macro: pin badge left side -->
+  <!-- Format: badge at x=330 going left, gpio at ~x=290, functions further left -->
+
+  <!-- Row definitions for left side, y starts at 70, step 37 -->
+
+  <!-- 3V3 -->
+  <line x1="200" y1="76" x2="340" y2="76" stroke="#CC0000" stroke-width="1.5"/>
+  <rect x="295" y="68" width="42" height="16" rx="3" fill="#CC0000"/>
+  <text x="316" y="79" text-anchor="middle" class="label-white">3V3</text>
+
+  <!-- RST -->
+  <line x1="200" y1="113" x2="340" y2="113" stroke="#DAA520" stroke-width="1.5"/>
+  <rect x="295" y="105" width="42" height="16" rx="3" fill="#DAA520"/>
+  <text x="316" y="116" text-anchor="middle" class="label-white">RST</text>
+
+  <!-- GPIO4 -->
+  <line x1="40" y1="150" x2="340" y2="150" stroke="#555" stroke-width="1"/>
+  <rect x="295" y="142" width="42" height="16" rx="3" fill="#FF8C00"/>
+  <text x="316" y="153" text-anchor="middle" class="label-white">GPIO4</text>
+  <rect x="238" y="142" width="52" height="16" rx="3" fill="#008B8B"/>
+  <text x="264" y="153" text-anchor="middle" class="label-white">CAM_SIOD</text>
+  <rect x="183" y="142" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="208" y="153" text-anchor="middle" class="label-white">ADC1_CH3</text>
+  <rect x="155" y="142" width="22" height="16" rx="3" fill="#800080"/>
+  <text x="166" y="153" text-anchor="middle" class="label-white">T4</text>
+
+  <!-- GPIO5 -->
+  <line x1="40" y1="187" x2="340" y2="187" stroke="#555" stroke-width="1"/>
+  <rect x="295" y="179" width="42" height="16" rx="3" fill="#FF8C00"/>
+  <text x="316" y="190" text-anchor="middle" class="label-white">GPIO5</text>
+  <rect x="238" y="179" width="52" height="16" rx="3" fill="#008B8B"/>
+  <text x="264" y="190" text-anchor="middle" class="label-white">CAM_SIOC</text>
+  <rect x="183" y="179" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="208" y="190" text-anchor="middle" class="label-white">ADC1_CH4</text>
+  <rect x="155" y="179" width="22" height="16" rx="3" fill="#800080"/>
+  <text x="166" y="190" text-anchor="middle" class="label-white">T5</text>
+
+  <!-- GPIO6 -->
+  <line x1="40" y1="224" x2="340" y2="224" stroke="#555" stroke-width="1"/>
+  <rect x="295" y="216" width="42" height="16" rx="3" fill="#FF8C00"/>
+  <text x="316" y="227" text-anchor="middle" class="label-white">GPIO6</text>
+  <rect x="230" y="216" width="60" height="16" rx="3" fill="#008B8B"/>
+  <text x="260" y="227" text-anchor="middle" class="label-white">CAM_VYSNC</text>
+  <rect x="175" y="216" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="200" y="227" text-anchor="middle" class="label-white">ADC1_CH5</text>
+  <rect x="150" y="216" width="20" height="16" rx="3" fill="#800080"/>
+  <text x="160" y="227" text-anchor="middle" class="label-white">T6</text>
+
+  <!-- GPIO7 -->
+  <line x1="40" y1="261" x2="340" y2="261" stroke="#555" stroke-width="1"/>
+  <rect x="295" y="253" width="42" height="16" rx="3" fill="#FF8C00"/>
+  <text x="316" y="264" text-anchor="middle" class="label-white">GPIO7</text>
+  <rect x="238" y="253" width="52" height="16" rx="3" fill="#008B8B"/>
+  <text x="264" y="264" text-anchor="middle" class="label-white">CAM_HREF</text>
+  <rect x="183" y="253" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="208" y="264" text-anchor="middle" class="label-white">ADC1_CH6</text>
+  <rect x="155" y="253" width="22" height="16" rx="3" fill="#800080"/>
+  <text x="166" y="264" text-anchor="middle" class="label-white">T7</text>
+
+  <!-- GPIO15 -->
+  <line x1="40" y1="298" x2="340" y2="298" stroke="#555" stroke-width="1"/>
+  <rect x="291" y="290" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="314" y="301" text-anchor="middle" class="label-white">GPIO15</text>
+  <rect x="232" y="290" width="54" height="16" rx="3" fill="#008B8B"/>
+  <text x="259" y="301" text-anchor="middle" class="label-white">CAM_XCLK</text>
+  <rect x="177" y="290" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="202" y="301" text-anchor="middle" class="label-white">ADC2_CH4</text>
+  <rect x="130" y="290" width="42" height="16" rx="3" fill="#4169E1"/>
+  <text x="151" y="301" text-anchor="middle" class="label-white">U0RTS</text>
+
+  <!-- GPIO16 -->
+  <line x1="40" y1="335" x2="340" y2="335" stroke="#555" stroke-width="1"/>
+  <rect x="291" y="327" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="314" y="338" text-anchor="middle" class="label-white">GPIO16</text>
+  <rect x="238" y="327" width="48" height="16" rx="3" fill="#008B8B"/>
+  <text x="262" y="338" text-anchor="middle" class="label-white">CAM_Y9</text>
+  <rect x="177" y="327" width="56" height="16" rx="3" fill="#228B22"/>
+  <text x="205" y="338" text-anchor="middle" class="label-white">ADC2_CH5</text>
+  <rect x="130" y="327" width="42" height="16" rx="3" fill="#4169E1"/>
+  <text x="151" y="338" text-anchor="middle" class="label-white">U0CTS</text>
+
+  <!-- GPIO17 -->
+  <line x1="40" y1="372" x2="340" y2="372" stroke="#555" stroke-width="1"/>
+  <rect x="291" y="364" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="314" y="375" text-anchor="middle" class="label-white">GPIO17</text>
+  <rect x="238" y="364" width="48" height="16" rx="3" fill="#008B8B"/>
+  <text x="262" y="375" text-anchor="middle" class="label-white">CAM_Y8</text>
+  <rect x="177" y="364" width="56" height="16" rx="3" fill="#228B22"/>
+  <text x="205" y="375" text-anchor="middle" class="label-white">ADC2_CH6</text>
+  <rect x="130" y="364" width="42" height="16" rx="3" fill="#4169E1"/>
+  <text x="151" y="375" text-anchor="middle" class="label-white">U1TXD</text>
+
+  <!-- GPIO18 -->
+  <line x1="40" y1="409" x2="340" y2="409" stroke="#555" stroke-width="1"/>
+  <rect x="291" y="401" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="314" y="412" text-anchor="middle" class="label-white">GPIO18</text>
+  <rect x="238" y="401" width="48" height="16" rx="3" fill="#008B8B"/>
+  <text x="262" y="412" text-anchor="middle" class="label-white">CAM_Y7</text>
+  <rect x="177" y="401" width="56" height="16" rx="3" fill="#228B22"/>
+  <text x="205" y="412" text-anchor="middle" class="label-white">ADC2_CH7</text>
+  <rect x="130" y="401" width="42" height="16" rx="3" fill="#4169E1"/>
+  <text x="151" y="412" text-anchor="middle" class="label-white">U1RXD</text>
+
+  <!-- GPIO8 -->
+  <line x1="40" y1="446" x2="340" y2="446" stroke="#555" stroke-width="1"/>
+  <rect x="295" y="438" width="42" height="16" rx="3" fill="#FF8C00"/>
+  <text x="316" y="449" text-anchor="middle" class="label-white">GPIO8</text>
+  <rect x="238" y="438" width="52" height="16" rx="3" fill="#008B8B"/>
+  <text x="264" y="449" text-anchor="middle" class="label-white">CAM_Y4</text>
+  <rect x="183" y="438" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="208" y="449" text-anchor="middle" class="label-white">ADC1_CH7</text>
+  <rect x="155" y="438" width="22" height="16" rx="3" fill="#800080"/>
+  <text x="166" y="449" text-anchor="middle" class="label-white">T8</text>
+
+  <!-- GPIO3 -->
+  <line x1="40" y1="483" x2="340" y2="483" stroke="#555" stroke-width="1"/>
+  <rect x="295" y="475" width="42" height="16" rx="3" fill="#FF8C00"/>
+  <text x="316" y="486" text-anchor="middle" class="label-white">GPIO3</text>
+  <rect x="238" y="475" width="52" height="16" rx="3" fill="#2E8B57"/>
+  <text x="264" y="486" text-anchor="middle" class="label-white">JTAG_EN</text>
+  <rect x="183" y="475" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="208" y="486" text-anchor="middle" class="label-white">ADC1_CH2</text>
+  <rect x="155" y="475" width="22" height="16" rx="3" fill="#800080"/>
+  <text x="166" y="486" text-anchor="middle" class="label-white">T3</text>
+
+  <!-- GPIO46 -->
+  <line x1="100" y1="520" x2="340" y2="520" stroke="#555" stroke-width="1"/>
+  <rect x="291" y="512" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="314" y="523" text-anchor="middle" class="label-white">GPIO46</text>
+  <rect x="248" y="512" width="38" height="16" rx="3" fill="#555"/>
+  <text x="267" y="523" text-anchor="middle" class="label-white">LOG</text>
+
+  <!-- GPIO9 -->
+  <line x1="40" y1="557" x2="340" y2="557" stroke="#555" stroke-width="1"/>
+  <rect x="295" y="549" width="42" height="16" rx="3" fill="#FF8C00"/>
+  <text x="316" y="560" text-anchor="middle" class="label-white">GPIO9</text>
+  <rect x="238" y="549" width="52" height="16" rx="3" fill="#008B8B"/>
+  <text x="264" y="560" text-anchor="middle" class="label-white">CAM_Y3</text>
+  <rect x="183" y="549" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="208" y="560" text-anchor="middle" class="label-white">ADC1_CH8</text>
+  <rect x="155" y="549" width="22" height="16" rx="3" fill="#800080"/>
+  <text x="166" y="560" text-anchor="middle" class="label-white">T9</text>
+
+  <!-- GPIO10 -->
+  <line x1="40" y1="594" x2="340" y2="594" stroke="#555" stroke-width="1"/>
+  <rect x="291" y="586" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="314" y="597" text-anchor="middle" class="label-white">GPIO10</text>
+  <rect x="238" y="586" width="48" height="16" rx="3" fill="#008B8B"/>
+  <text x="262" y="597" text-anchor="middle" class="label-white">CAM_Y5</text>
+  <rect x="183" y="586" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="208" y="597" text-anchor="middle" class="label-white">ADC1_CH9</text>
+  <rect x="152" y="586" width="25" height="16" rx="3" fill="#800080"/>
+  <text x="164" y="597" text-anchor="middle" class="label-white">T10</text>
+
+  <!-- GPIO11 -->
+  <line x1="40" y1="631" x2="340" y2="631" stroke="#555" stroke-width="1"/>
+  <rect x="291" y="623" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="314" y="634" text-anchor="middle" class="label-white">GPIO11</text>
+  <rect x="238" y="623" width="48" height="16" rx="3" fill="#008B8B"/>
+  <text x="262" y="634" text-anchor="middle" class="label-white">CAM_Y2</text>
+  <rect x="177" y="623" width="56" height="16" rx="3" fill="#228B22"/>
+  <text x="205" y="634" text-anchor="middle" class="label-white">ADC2_CH0</text>
+  <rect x="152" y="623" width="20" height="16" rx="3" fill="#800080"/>
+  <text x="162" y="634" text-anchor="middle" class="label-white">T11</text>
+
+  <!-- GPIO12 -->
+  <line x1="40" y1="668" x2="340" y2="668" stroke="#555" stroke-width="1"/>
+  <rect x="291" y="660" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="314" y="671" text-anchor="middle" class="label-white">GPIO12</text>
+  <rect x="238" y="660" width="48" height="16" rx="3" fill="#008B8B"/>
+  <text x="262" y="671" text-anchor="middle" class="label-white">CAM_Y6</text>
+  <rect x="177" y="660" width="56" height="16" rx="3" fill="#228B22"/>
+  <text x="205" y="671" text-anchor="middle" class="label-white">ADC2_CH1</text>
+  <rect x="152" y="660" width="20" height="16" rx="3" fill="#800080"/>
+  <text x="162" y="671" text-anchor="middle" class="label-white">T12</text>
+
+  <!-- GPIO13 -->
+  <line x1="40" y1="705" x2="340" y2="705" stroke="#555" stroke-width="1"/>
+  <rect x="291" y="697" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="314" y="708" text-anchor="middle" class="label-white">GPIO13</text>
+  <rect x="232" y="697" width="54" height="16" rx="3" fill="#008B8B"/>
+  <text x="259" y="708" text-anchor="middle" class="label-white">CAM_PCLK</text>
+  <rect x="177" y="697" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="202" y="708" text-anchor="middle" class="label-white">ADC2_CH2</text>
+  <rect x="152" y="697" width="20" height="16" rx="3" fill="#800080"/>
+  <text x="162" y="708" text-anchor="middle" class="label-white">T13</text>
+
+  <!-- GPIO14 — FREE pin -->
+  <rect x="40" y="730" width="310" height="24" rx="4" fill="#FFD700" opacity="0.35"/>
+  <line x1="40" y1="742" x2="340" y2="742" stroke="#FFD700" stroke-width="2"/>
+  <rect x="291" y="734" width="46" height="16" rx="3" fill="#FF8C00" stroke="#FFD700" stroke-width="1.5"/>
+  <text x="314" y="745" text-anchor="middle" class="label-white">GPIO14</text>
+  <rect x="234" y="734" width="52" height="16" rx="3" fill="#228B22"/>
+  <text x="260" y="745" text-anchor="middle" class="label-white">ADC2_CH3</text>
+  <rect x="208" y="734" width="22" height="16" rx="3" fill="#800080"/>
+  <text x="219" y="745" text-anchor="middle" class="label-white">T14</text>
+  <text x="170" y="744" text-anchor="middle" font-size="9" font-weight="bold" fill="#B8860B">FREE</text>
+
+  <!-- 5V -->
+  <line x1="200" y1="779" x2="340" y2="779" stroke="#CC0000" stroke-width="1.5"/>
+  <rect x="299" y="771" width="38" height="16" rx="3" fill="#CC0000"/>
+  <text x="318" y="782" text-anchor="middle" class="label-white">5V</text>
+
+  <!-- ==== RIGHT SIDE PINS ==== -->
+
+  <!-- GPIO43 -->
+  <line x1="600" y1="76" x2="860" y2="76" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="68" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="79" text-anchor="middle" class="label-white">GPIO43</text>
+  <rect x="652" y="68" width="46" height="16" rx="3" fill="#4169E1"/>
+  <text x="675" y="79" text-anchor="middle" class="label-white">U0TXD</text>
+  <rect x="704" y="68" width="46" height="16" rx="3" fill="#1E90FF"/>
+  <text x="727" y="79" text-anchor="middle" class="label-white">LED TX</text>
+
+  <!-- GPIO44 -->
+  <line x1="600" y1="113" x2="860" y2="113" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="105" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="116" text-anchor="middle" class="label-white">GPIO44</text>
+  <rect x="652" y="105" width="46" height="16" rx="3" fill="#4169E1"/>
+  <text x="675" y="116" text-anchor="middle" class="label-white">U0RXD</text>
+  <rect x="704" y="105" width="46" height="16" rx="3" fill="#1E90FF"/>
+  <text x="727" y="116" text-anchor="middle" class="label-white">LED RX</text>
+
+  <!-- GPIO1 -->
+  <line x1="600" y1="150" x2="860" y2="150" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="142" width="42" height="16" rx="3" fill="#FF8C00"/>
+  <text x="621" y="153" text-anchor="middle" class="label-white">GPIO1</text>
+  <rect x="648" y="142" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="673" y="153" text-anchor="middle" class="label-white">ADC1_CH0</text>
+  <rect x="704" y="142" width="20" height="16" rx="3" fill="#800080"/>
+  <text x="714" y="153" text-anchor="middle" class="label-white">T1</text>
+
+  <!-- GPIO2 -->
+  <line x1="600" y1="187" x2="900" y2="187" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="179" width="42" height="16" rx="3" fill="#FF8C00"/>
+  <text x="621" y="190" text-anchor="middle" class="label-white">GPIO2</text>
+  <rect x="648" y="179" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="673" y="190" text-anchor="middle" class="label-white">ADC1_CH1</text>
+  <rect x="704" y="179" width="44" height="16" rx="3" fill="#1E90FF"/>
+  <text x="726" y="190" text-anchor="middle" class="label-white">LED ON</text>
+  <rect x="754" y="179" width="20" height="16" rx="3" fill="#800080"/>
+  <text x="764" y="190" text-anchor="middle" class="label-white">T2</text>
+
+  <!-- GPIO42 -->
+  <line x1="600" y1="224" x2="800" y2="224" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="216" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="227" text-anchor="middle" class="label-white">GPIO42</text>
+  <rect x="652" y="216" width="38" height="16" rx="3" fill="#2E8B57"/>
+  <text x="671" y="227" text-anchor="middle" class="label-white">MTMS</text>
+
+  <!-- GPIO41 -->
+  <line x1="600" y1="261" x2="800" y2="261" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="253" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="264" text-anchor="middle" class="label-white">GPIO41</text>
+  <rect x="652" y="253" width="36" height="16" rx="3" fill="#2E8B57"/>
+  <text x="670" y="264" text-anchor="middle" class="label-white">MTDI</text>
+
+  <!-- GPIO40 -->
+  <line x1="600" y1="298" x2="840" y2="298" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="290" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="301" text-anchor="middle" class="label-white">GPIO40</text>
+  <rect x="652" y="290" width="48" height="16" rx="3" fill="#008B8B"/>
+  <text x="676" y="301" text-anchor="middle" class="label-white">SD_DATA</text>
+  <rect x="706" y="290" width="38" height="16" rx="3" fill="#2E8B57"/>
+  <text x="725" y="301" text-anchor="middle" class="label-white">MTDO</text>
+
+  <!-- GPIO39 -->
+  <line x1="600" y1="335" x2="840" y2="335" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="327" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="338" text-anchor="middle" class="label-white">GPIO39</text>
+  <rect x="652" y="327" width="46" height="16" rx="3" fill="#008B8B"/>
+  <text x="675" y="338" text-anchor="middle" class="label-white">SD_CLK</text>
+  <rect x="704" y="327" width="38" height="16" rx="3" fill="#2E8B57"/>
+  <text x="723" y="338" text-anchor="middle" class="label-white">MTCK</text>
+
+  <!-- GPIO38 -->
+  <line x1="600" y1="372" x2="820" y2="372" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="364" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="375" text-anchor="middle" class="label-white">GPIO38</text>
+  <rect x="652" y="364" width="48" height="16" rx="3" fill="#008B8B"/>
+  <text x="676" y="375" text-anchor="middle" class="label-white">SD_CMD</text>
+
+  <!-- GPIO37 -->
+  <line x1="600" y1="409" x2="810" y2="409" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="401" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="412" text-anchor="middle" class="label-white">GPIO37</text>
+  <rect x="652" y="401" width="46" height="16" rx="3" fill="#6A0DAD"/>
+  <text x="675" y="412" text-anchor="middle" class="label-white">PSRAM</text>
+
+  <!-- GPIO36 -->
+  <line x1="600" y1="446" x2="810" y2="446" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="438" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="449" text-anchor="middle" class="label-white">GPIO36</text>
+  <rect x="652" y="438" width="46" height="16" rx="3" fill="#6A0DAD"/>
+  <text x="675" y="449" text-anchor="middle" class="label-white">PSRAM</text>
+
+  <!-- GPIO35 -->
+  <line x1="600" y1="483" x2="810" y2="483" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="475" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="486" text-anchor="middle" class="label-white">GPIO35</text>
+  <rect x="652" y="475" width="46" height="16" rx="3" fill="#6A0DAD"/>
+  <text x="675" y="486" text-anchor="middle" class="label-white">PSRAM</text>
+
+  <!-- GPIO00 -->
+  <line x1="600" y1="520" x2="810" y2="520" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="512" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="523" text-anchor="middle" class="label-white">GPIO00</text>
+  <rect x="652" y="512" width="34" height="16" rx="3" fill="#DAA520"/>
+  <text x="669" y="523" text-anchor="middle" class="label-white">Boot</text>
+
+  <!-- GPIO45 -->
+  <line x1="600" y1="557" x2="810" y2="557" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="549" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="560" text-anchor="middle" class="label-white">GPIO45</text>
+  <rect x="652" y="549" width="36" height="16" rx="3" fill="#FF8C00"/>
+  <text x="670" y="560" text-anchor="middle" class="label-white">VSPI</text>
+
+  <!-- GPIO48 -->
+  <line x1="600" y1="594" x2="810" y2="594" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="586" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="597" text-anchor="middle" class="label-white">GPIO48</text>
+  <rect x="652" y="586" width="48" height="16" rx="3" fill="#FF1493"/>
+  <text x="676" y="597" text-anchor="middle" class="label-white">WS2812</text>
+
+  <!-- GPIO47 -->
+  <line x1="600" y1="631" x2="760" y2="631" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="623" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="634" text-anchor="middle" class="label-white">GPIO47</text>
+
+  <!-- GPIO21 -->
+  <line x1="600" y1="668" x2="760" y2="668" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="660" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="671" text-anchor="middle" class="label-white">GPIO21</text>
+
+  <!-- GPIO20 -->
+  <line x1="600" y1="705" x2="900" y2="705" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="697" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="708" text-anchor="middle" class="label-white">GPIO20</text>
+  <rect x="652" y="697" width="38" height="16" rx="3" fill="#9ACD32"/>
+  <text x="671" y="708" text-anchor="middle" class="label-white">USB_D-</text>
+  <rect x="696" y="697" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="721" y="708" text-anchor="middle" class="label-white">ADC2_CH9</text>
+  <rect x="752" y="697" width="36" height="16" rx="3" fill="#4169E1"/>
+  <text x="770" y="708" text-anchor="middle" class="label-white">UICTS</text>
+
+  <!-- GPIO19 -->
+  <line x1="600" y1="742" x2="900" y2="742" stroke="#555" stroke-width="1"/>
+  <rect x="600" y="734" width="46" height="16" rx="3" fill="#FF8C00"/>
+  <text x="623" y="745" text-anchor="middle" class="label-white">GPIO19</text>
+  <rect x="652" y="734" width="38" height="16" rx="3" fill="#9ACD32"/>
+  <text x="671" y="745" text-anchor="middle" class="label-white">USB_D+</text>
+  <rect x="696" y="734" width="50" height="16" rx="3" fill="#228B22"/>
+  <text x="721" y="745" text-anchor="middle" class="label-white">ADC2_CH8</text>
+  <rect x="752" y="734" width="36" height="16" rx="3" fill="#4169E1"/>
+  <text x="770" y="745" text-anchor="middle" class="label-white">UIRTS</text>
+
+  <!-- GND right -->
+  <line x1="600" y1="779" x2="800" y2="779" stroke="#222" stroke-width="1.5"/>
+  <rect x="600" y="771" width="38" height="16" rx="3" fill="#222222"/>
+  <text x="619" y="782" text-anchor="middle" class="label-white">GND</text>
+
+  <!-- ==== LEGEND ==== -->
+  <rect x="20" y="870" width="1060" height="130" rx="6" fill="white" stroke="#ccc"/>
+  <text x="550" y="886" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">Legend</text>
+
+  <!-- Legend items row 1 -->
+  <rect x="35"  y="895" width="36" height="14" rx="2" fill="#CC0000"/>
+  <text x="76" y="906" font-size="10" fill="#333">Power</text>
+  <rect x="135" y="895" width="36" height="14" rx="2" fill="#222222"/>
+  <text x="176" y="906" font-size="10" fill="#333">GND</text>
+  <rect x="235" y="895" width="36" height="14" rx="2" fill="#DAA520"/>
+  <text x="276" y="906" font-size="10" fill="#333">Reset/Strap</text>
+  <rect x="360" y="895" width="36" height="14" rx="2" fill="#FF8C00"/>
+  <text x="401" y="906" font-size="10" fill="#333">GPIO</text>
+  <rect x="450" y="895" width="36" height="14" rx="2" fill="#008B8B"/>
+  <text x="491" y="906" font-size="10" fill="#333">Camera / SD</text>
+  <rect x="580" y="895" width="36" height="14" rx="2" fill="#228B22"/>
+  <text x="621" y="906" font-size="10" fill="#333">ADC</text>
+  <rect x="670" y="895" width="36" height="14" rx="2" fill="#800080"/>
+  <text x="711" y="906" font-size="10" fill="#333">Touch</text>
+  <rect x="760" y="895" width="36" height="14" rx="2" fill="#4169E1"/>
+  <text x="801" y="906" font-size="10" fill="#333">Serial / UART</text>
+  <rect x="890" y="895" width="36" height="14" rx="2" fill="#1E90FF"/>
+  <text x="931" y="906" font-size="10" fill="#333">On-board LED</text>
+
+  <!-- Legend items row 2 -->
+  <rect x="35"  y="918" width="36" height="14" rx="2" fill="#6A0DAD"/>
+  <text x="76" y="929" font-size="10" fill="#333">PSRAM</text>
+  <rect x="135" y="918" width="36" height="14" rx="2" fill="#FF1493"/>
+  <text x="176" y="929" font-size="10" fill="#333">WS2812</text>
+  <rect x="235" y="918" width="36" height="14" rx="2" fill="#2E8B57"/>
+  <text x="276" y="929" font-size="10" fill="#333">JTAG</text>
+  <rect x="360" y="918" width="36" height="14" rx="2" fill="#9ACD32"/>
+  <text x="401" y="929" font-size="10" fill="#333">USB</text>
+  <text x="450" y="929" font-size="10" fill="#333">~ = PWM Capable</text>
+
+  <!-- Note -->
+  <text x="550" y="960" text-anchor="middle" font-size="10" fill="#666">All GPIO pins marked with ~ are PWM capable. GPIO35–37 are internal PSRAM pins. GPIO3 doubles as JTAG_EN strapping pin.</text>
+</svg>
