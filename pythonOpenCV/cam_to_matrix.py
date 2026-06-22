@@ -20,23 +20,29 @@ from led_simulator import LedMatrix, make_label, side_by_side
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-CAMERA_INDEX = 0
-WIDTH        = 16
-HEIGHT       = 32
+CAMERA_INDEX  = 0
+FRAME_WIDTH   = 160    # request this resolution from the camera
+FRAME_HEIGHT  = 120    # 160×120 is the minimum most webcams support
+WIDTH         = 16
+HEIGHT        = 32
 WARMUP_FRAMES = 8
 
 # ── Matrix and camera setup ───────────────────────────────────────────────────
 
-matrix = LedMatrix(WIDTH, HEIGHT, brightness=0.9, window_title="Cam → Matrix")
+matrix = LedMatrix(WIDTH, HEIGHT, brightness=0.9, window_title="Cam -> Matrix")
 
 cap = cv2.VideoCapture(CAMERA_INDEX)
 if not cap.isOpened():
     raise RuntimeError(f"Could not open camera index {CAMERA_INDEX}")
 
-print(f"Camera: {int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))}×"
-      f"{int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))}")
+cap.set(cv2.CAP_PROP_FRAME_WIDTH,  FRAME_WIDTH)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
-print(f"Warming up …")
+actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+print(f"Camera: requested {FRAME_WIDTH}x{FRAME_HEIGHT}, got {actual_w}x{actual_h}")
+
+print("Warming up ...")
 for _ in range(WARMUP_FRAMES):
     cap.read()
 
@@ -94,7 +100,7 @@ while True:
 
     cam_panel    = make_label(annotate_camera(frame), "Camera")
     matrix_panel = make_label(matrix.render(), "LED Matrix (16x32)")
-    cv2.imshow("Cam → Matrix", side_by_side(cam_panel, matrix_panel))
+    cv2.imshow("Cam -> Matrix", side_by_side(cam_panel, matrix_panel))
 
     frame_count += 1
     now = time.time()
