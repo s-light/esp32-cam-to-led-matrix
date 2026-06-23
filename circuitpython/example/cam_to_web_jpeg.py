@@ -1,23 +1,23 @@
 """
-Camera → multipart BMP web stream.
+Camera → MJPEG web stream (JPEG experiment).
 
-JPEG pixel format does not work in the espressif_esp32s3_eye CircuitPython
-firmware, so this example captures RGB565 frames and wraps each one in a
-minimal BMP header (BI_BITFIELDS, 16 bpp) before sending.  The raw uint16
-camera buffer bytes are already little-endian RGB565, matching the
-BI_BITFIELDS layout exactly — no per-pixel conversion needed.
+The espressif_esp32s3_eye firmware sometimes refuses to return frames
+when PixelFormat.JPEG is used (cam.take() returns None).  This script
+tries several configurations to find one that works, then streams
+multipart/x-mixed-replace with image/jpeg parts — no per-pixel
+conversion, so throughput should be much higher than the BMP version.
 
-Connects to WiFi, starts a tiny HTTP server on port 80.
+If JPEG turns out to be completely broken on this firmware, the script
+raises a RuntimeError with a clear message (no silent fallback).
 
-Access via:
-  http://<ip-address>/          (IP printed on the serial console)
-  http://esp32cam.local/        (if mDNS works on your network)
+Endpoints:
+  http://<ip>/          — MJPEG reconfigurestream (open in browser or VLC)
+  http://<ip>/frame     — single JPEG frame (save with curl)
 
 WiFi credentials go in CIRCUITPY:/settings.toml — see settings.toml.example.
 """
 
 import os
-import struct
 import time
 import board
 import wifi
@@ -32,16 +32,23 @@ except ImportError:
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-HOSTNAME   = "esp32cam"
-PORT       = 80
-FRAME_SIZE = espcamera.FrameSize.QQVGA   # 160×120
-FRAME_W    = 160
-FRAME_H    = 120
-XCLK_FREQ  = 20_000_000
+HOSTNAME  = "esp32cam"
+PORT      = 80
+XCLK_FREQ = 20_000_000
 
-# ── Camera setup ──────────────────────────────────────────────────────────────
+# ── Camera setup — try JPEG with several frame sizes ─────────────────────────
+#
+# JPEG mode sometimes only works with certain frame sizes.  We try a short list
+# in order from smallest to largest and use the first one that yields a frame.
 
-print("Initialising camera ...")
+_JPEG_CANDIDATES = [
+    espcamera.FrameSize.QQVGA,   # 160×120
+    espcamera.FrameSize.QVGA,    # 320×240
+    espcamera.FrameSize.CIF,     # 400×296
+    espcamera.FrameSize.VGA,     # 640×480
+]
+
+print("Initialising camera (JPEG) ...")
 i2c = board.I2C()
 
 cam = espcamera.Camera(
@@ -52,41 +59,54 @@ cam = espcamera.Camera(
     href_pin=board.CAMERA_HREF,
     i2c=i2c,
     external_clock_frequency=XCLK_FREQ,
-    pixel_format=espcamera.PixelFormat.RGB565,
-    frame_size=FRAME_SIZE,
-    framebuffer_count=2,
+    pixel_format=espcamera.PixelFormat.JPEG,
+    frame_size=espcamera.FrameSize.QQVGA,
+    framebuffer_count=1,   # JPEG mode often needs 1 buffer, not 2
 )
+cam.vflip   = True
+cam.hmirror = True
+# colorbar intentionally OFF — it may interfere with JPEG encoding
 
-# cam.colorbar = True
-cam.vflip  = True   # sensor is mounted upside-down on this board
-cam.hmirror = True  # mirror so left/right match viewer expectation
+# Try taking a frame with the initial config before any reconfigure.
+print("Probing JPEG output ...")
+print(f"  frame_available at init: {cam.frame_available}")
+frame = None
+for attempt in range(16):
+    f = cam.take()
+    if f is not None:
+        frame = f
+        print(f"  got frame at init on attempt {attempt}")
+        break
+    print(f"  init attempt {attempt}: None  frame_available={cam.frame_available}")
 
-for _ in range(8):
-    cam.take()
+# If that failed, try reconfigure through the candidate sizes.
+if frame is None:
+    for fs in _JPEG_CANDIDATES:
+        print(f"  reconfigure frame_size={fs} ...")
+        cam.reconfigure(
+            pixel_format=espcamera.PixelFormat.JPEG,
+            frame_size=fs,
+            framebuffer_count=1,
+        )
+        for attempt in range(16):
+            f = cam.take()
+            if f is not None:
+                frame = f
+                print(f"  got frame on attempt {attempt}  frame_available={cam.frame_available}")
+                break
+            print(f"  attempt {attempt}: None  frame_available={cam.frame_available}")
+        if frame is not None:
+            break
 
-print(f"Camera ready: {cam.width}x{cam.height} RGB565")
-
-# ── BMP header (pre-built, constant for every frame) ─────────────────────────
-#
-# 16-bit BI_BITFIELDS BMP: no per-pixel conversion needed because the camera's
-# uint16 buffer bytes are already little-endian RGB565, matching exactly.
-# Negative height → top-down row order (camera outputs top-down after vflip).
-
-def _make_bmp_header(w, h):
-    img_bytes = w * h * 2
-    file_size = 66 + img_bytes          # 14 file hdr + 40 DIB hdr + 12 masks
-    return struct.pack(
-        "<2sIHHIIiiHHIIiiIIIII",
-        b"BM", file_size, 0, 0, 66,
-        40, w, -h, 1, 16, 3, img_bytes, 0, 0, 0, 0,
-        0xF800, 0x07E0, 0x001F,
+if frame is None:
+    raise RuntimeError(
+        "cam.take() returned None for all JPEG configurations.\n"
+        "JPEG pixel format is not supported by this firmware build."
     )
 
-BMP_HEADER      = _make_bmp_header(FRAME_W, FRAME_H)
-BMP_CONTENT_LEN = len(BMP_HEADER) + FRAME_W * FRAME_H * 2
-
-# Row-sized buffer — compute and send one row at a time.
-_row_buf = bytearray(FRAME_W * 2)
+print(f"Frame type : {type(frame)}")
+print(f"Frame len  : {len(frame)} bytes")
+print(f"Camera ready: {cam.width}x{cam.height} JPEG  quality={_QUALITY}")
 
 # ── WiFi ──────────────────────────────────────────────────────────────────────
 
@@ -101,8 +121,6 @@ wifi.radio.connect(ssid, password)
 ip = str(wifi.radio.ipv4_address)
 print(f"Connected — IP: {ip}")
 
-# ── mDNS ──────────────────────────────────────────────────────────────────────
-
 if MDNS_AVAILABLE:
     mdns_server = mdns.Server(wifi.radio)
     mdns_server.hostname = HOSTNAME
@@ -116,13 +134,6 @@ STREAM_HEADER = (
     b"Content-Type: multipart/x-mixed-replace;boundary=frame\r\n"
     b"Cache-Control: no-cache\r\n"
     b"Connection: close\r\n"
-    b"\r\n"
-)
-
-PART_HEADER = (
-    b"--frame\r\n"
-    b"Content-Type: image/bmp\r\n"
-    b"Content-Length: " + str(BMP_CONTENT_LEN).encode() + b"\r\n"
     b"\r\n"
 )
 
@@ -142,7 +153,6 @@ def send_all(conn, data):
             raise
 
 def read_request(conn):
-    """Read request, return URL path (e.g. '/' or '/frame')."""
     conn.settimeout(2.0)
     buf = bytearray(1024)
     n = 0
@@ -156,57 +166,55 @@ def read_request(conn):
     except Exception:
         return "/"
 
-def serve_frame(conn):
-    """Serve a single BMP frame — save with curl or browser Save-As."""
+def jpeg_len(frame):
+    """Find the actual JPEG length by locating the EOI marker (FF D9)."""
+    # The memoryview may be sized to the full buffer; scan backwards for EOI.
+    for i in range(len(frame) - 1, 0, -1):
+        if frame[i - 1] == 0xFF and frame[i] == 0xD9:
+            return i + 1
+    return len(frame)
+
+def serve_single(conn):
     frame = cam.take()
     if frame is None:
         conn.send(b"HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n")
         return
+    n = jpeg_len(frame)
     send_all(conn,
-        b"HTTP/1.1 200 OK\r\nContent-Type: image/bmp\r\n"
-        b"Content-Length: " + str(BMP_CONTENT_LEN).encode() + b"\r\n"
+        b"HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\n"
+        b"Content-Length: " + str(n).encode() + b"\r\n"
         b"Connection: close\r\n\r\n"
     )
-    send_all(conn, BMP_HEADER)
-    for y in range(FRAME_H):
-        base = y * FRAME_W
-        for x in range(FRAME_W):
-            px = frame[base + x]
-            _row_buf[x * 2]     = (px >> 8) & 0xFF
-            _row_buf[x * 2 + 1] = px & 0xFF
-        send_all(conn, _row_buf)
+    send_all(conn, frame[:n])
 
 def serve_stream(conn):
     send_all(conn, STREAM_HEADER)
-
     frame_count = 0
-    t_start     = time.monotonic()
-
+    t_start = time.monotonic()
     while True:
         frame = cam.take()
         if frame is None:
+            print("  frame is None")
             continue
-
         try:
-            send_all(conn, PART_HEADER)
-            send_all(conn, BMP_HEADER)
-            for y in range(FRAME_H):
-                base = y * FRAME_W
-                for x in range(FRAME_W):
-                    px = frame[base + x]
-                    _row_buf[x * 2]     = (px >> 8) & 0xFF
-                    _row_buf[x * 2 + 1] = px & 0xFF
-                send_all(conn, _row_buf)
+            n = jpeg_len(frame)
+            part = (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n"
+                b"Content-Length: " + str(n).encode() + b"\r\n"
+                b"\r\n"
+            )
+            send_all(conn, part)
+            send_all(conn, frame[:n])
             send_all(conn, b"\r\n")
         except OSError:
             break
-
         frame_count += 1
         elapsed = time.monotonic() - t_start
         if elapsed >= 5.0:
-            print(f"  {frame_count / elapsed:.1f} fps")
+            print(f"  {frame_count / elapsed:.1f} fps  |  last JPEG {n} B")
             frame_count = 0
-            t_start     = time.monotonic()
+            t_start = time.monotonic()
 
 # ── Server loop ───────────────────────────────────────────────────────────────
 
@@ -217,7 +225,7 @@ server.bind(("", PORT))
 server.listen(1)
 
 print(f"\nLive stream:   http://{ip}/")
-print(f"Single frame:  http://{ip}/frame  (save as BMP)")
+print(f"Single frame:  http://{ip}/frame  (save as JPEG)")
 print(f"VLC:           vlc http://{ip}/")
 print("Press Ctrl-C to stop.\n")
 
@@ -227,7 +235,7 @@ while True:
         print(f"Client connected: {addr[0]}")
         path = read_request(conn)
         if path == "/frame":
-            serve_frame(conn)
+            serve_single(conn)
         else:
             serve_stream(conn)
         conn.close()

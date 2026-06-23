@@ -42,7 +42,7 @@ BG_CAPTURE_FRAMES = 6     # frames averaged for a stable background reference
 # Power management
 MAX_BRIGHTNESS      = 0.30   # absolute ceiling (0.0–1.0)
 CURRENT_PER_LED_MA  = 60     # mA per LED at full white, full brightness
-POWER_BUDGET_MA     = 1500   # mA total budget for the matrix (e.g. 1.5 A supply)
+POWER_BUDGET_MA     = 500   # mA total budget for the matrix (e.g. 1.5 A supply)
 
 # Camera
 FRAME_SIZE   = espcamera.FrameSize.QQVGA
@@ -66,7 +66,7 @@ pixels = neopixel.NeoPixel(
 
 # ── Button setup (BOOT = GPIO0, active-low) ───────────────────────────────────
 
-btn = DigitalInOut(board.IO0)
+btn = DigitalInOut(board.BOOT)
 btn.direction = Direction.INPUT
 btn.pull = Pull.UP
 
@@ -89,6 +89,9 @@ cam = espcamera.Camera(
     frame_size=FRAME_SIZE,
     framebuffer_count=2,
 )
+
+cam.vflip   = True  # sensor is mounted upside-down on this board
+cam.hmirror = True  # mirror so left/right match viewer expectation
 
 print("Warming up camera …")
 for _ in range(8):

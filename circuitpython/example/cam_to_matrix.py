@@ -75,6 +75,9 @@ cam = espcamera.Camera(
     framebuffer_count=2,
 )
 
+cam.vflip   = True  # sensor is mounted upside-down on this board
+cam.hmirror = True  # mirror so left/right match viewer expectation
+
 # Discard a few frames so auto-exposure can settle.
 print("Warming up camera …")
 for _ in range(8):
