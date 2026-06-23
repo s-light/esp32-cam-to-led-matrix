@@ -23,11 +23,13 @@ GPIO14 is the only left-side pin with no dedicated on-board function.
 import time
 import math
 import board
+import microcontroller
 import neopixel
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-DATA_PIN   = board.IO14   # change to whichever GPIO the matrix is wired to
+# GPIO14 is the free pin on the left header (board.IO14 not exposed by this firmware)
+DATA_PIN = microcontroller.pin.GPIO14
 WIDTH      = 16           # columns
 HEIGHT     = 32           # rows
 BRIGHTNESS = 0.15         # 0.0–1.0  (keep low for direct viewing / power budget)
@@ -152,7 +154,12 @@ clear()
 pixels.show()
 time.sleep(0.3)
 
+print("ledmatrix_test.py")
+
 while True:
+    print("test_vertical_sweep")
     test_vertical_sweep()
+    print("test_horizontal_sweep")
     test_horizontal_sweep()
-    test_plasma()
+    # print("test_plasma")
+    # test_plasma()
