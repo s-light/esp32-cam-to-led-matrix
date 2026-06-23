@@ -20,10 +20,10 @@ lit — keeping power draw low enough for small USB or lab supplies.
 
 ### Examples
 
-| Folder | Environment | What it does |
-|--------|------------|--------------|
+| Folder                   | Environment                | What it does                                                                      |
+| ------------------------ | -------------------------- | --------------------------------------------------------------------------------- |
 | `circuitpython/example/` | CircuitPython on the board | Camera → SD card, matrix test patterns, live cam → matrix, foreground + power cap |
-| `pythonOpenCV/` | Desktop Python + OpenCV | Same examples running on a PC webcam with an LED matrix simulator (glow effect) |
+| `pythonOpenCV/`          | Desktop Python + OpenCV    | Same examples running on a PC webcam with an LED matrix simulator (glow effect)   |
 
 ### Board variant (CircuitPython)
 
@@ -48,7 +48,7 @@ python cam_to_matrix_fg.py    # foreground-only + power cap (Space to recapture 
 
 > ESP32-S3-WROOM CAM
 > ESP32-S3-N16R8
-> 2640 Camera
+> OV2640 Camera
 > TF Card Module
 
 ## License
