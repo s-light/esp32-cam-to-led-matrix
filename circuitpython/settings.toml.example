@@ -1,0 +1,5 @@
+# Copy this file to CIRCUITPY:/settings.toml and fill in your credentials.
+# settings.toml is read by CircuitPython at boot; os.getenv() retrieves values.
+
+CIRCUITPY_WIFI_SSID = "your-network-name"
+CIRCUITPY_WIFI_PASSWORD = "your-password"
