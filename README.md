@@ -1,6 +1,46 @@
 # esp32-cam-to-led-matrix
 
-simple example sketch to bring the esp32-s3 cam board video stream on a small ws2812 matrix.
+Stream a camera image onto a small WS2812 LED matrix using an ESP32-S3-CAM board.
+The matrix is 16×32 pixels, wired in a snake pattern starting at the top-right corner.
+
+## Overview
+
+```
+┌─────────────────┐        ┌─────────────────┐
+│  ESP32-S3-CAM   │        │  WS2812 Matrix  │
+│                 │        │    16 × 32 px   │
+│  OV2640 ──────────────►  │  snake layout   │
+│  GPIO14 ──────────────►  │  top-right      │
+└─────────────────┘        └─────────────────┘
+```
+
+The main feature is **foreground-only rendering**: a background reference
+frame is subtracted each tick so only subjects in front of the camera are
+lit — keeping power draw low enough for small USB or lab supplies.
+
+### Examples
+
+| Folder | Environment | What it does |
+|--------|------------|--------------|
+| `circuitpython/example/` | CircuitPython on the board | Camera → SD card, matrix test patterns, live cam → matrix, foreground + power cap |
+| `pythonOpenCV/` | Desktop Python + OpenCV | Same examples running on a PC webcam with an LED matrix simulator (glow effect) |
+
+### Board variant (CircuitPython)
+
+Flash **`espressif_esp32s3_eye`** from [circuitpython.org](https://circuitpython.org/board/espressif_esp32s3_eye/) —
+all camera GPIOs match the ESP32-S3-CAM pinout exactly.
+See `esp32-s3-cam_pinout.md` / `.svg` for the full pin reference.
+
+### Quick start (desktop)
+
+```bash
+cd pythonOpenCV
+pip install -r requirements.txt
+python ledmatrix_test.py      # matrix patterns, no camera needed
+python camera_live.py         # plain camera preview
+python cam_to_matrix.py       # live cam mapped to LED matrix simulator
+python cam_to_matrix_fg.py    # foreground-only + power cap (Space to recapture background)
+```
 
 ## HW
 
