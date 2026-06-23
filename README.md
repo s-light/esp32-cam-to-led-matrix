@@ -38,6 +38,7 @@ cd pythonOpenCV
 pip install -r requirements.txt
 python ledmatrix_test.py      # matrix patterns, no camera needed
 python camera_live.py         # plain camera preview
+python camera_fg.py         # plain camera preview
 python cam_to_matrix.py       # live cam mapped to LED matrix simulator
 python cam_to_matrix_fg.py    # foreground-only + power cap (Space to recapture background)
 ```
