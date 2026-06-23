@@ -24,13 +24,14 @@ Snake wiring: pixel 0 at top-right, even rows right→left,
 import time
 import math
 import board
-import busio
+import microcontroller
 import neopixel
 import espcamera
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-MATRIX_PIN = board.IO14   # GPIO driving the matrix data-in line
+# GPIO14 is the free pin on the left header (board.IO14 not exposed by this firmware)
+MATRIX_PIN = microcontroller.pin.GPIO14
 WIDTH      = 16           # matrix columns
 HEIGHT     = 32           # matrix rows
 BRIGHTNESS = 0.20         # 0.0–1.0
@@ -38,12 +39,12 @@ BRIGHTNESS = 0.20         # 0.0–1.0
 # Camera: use the smallest frame that is at least WIDTH × HEIGHT pixels.
 # B96X96 (96×96) is the smallest the OV2640 supports.
 # Fall back to QQVGA (160×120) if B96X96 doesn't work on your firmware build.
-FRAME_SIZE   = espcamera.FrameSize.B96X96
-FRAME_WIDTH  = 96
-FRAME_HEIGHT = 96
-# For QQVGA uncomment these two lines instead:
-# FRAME_SIZE   = espcamera.FrameSize.QQVGA
-# FRAME_WIDTH, FRAME_HEIGHT = 160, 120
+FRAME_SIZE   = espcamera.FrameSize.QQVGA
+FRAME_WIDTH  = 160
+FRAME_HEIGHT = 120
+# For B96X96 uncomment these two lines instead (if supported by firmware):
+# FRAME_SIZE   = espcamera.FrameSize.B96X96
+# FRAME_WIDTH, FRAME_HEIGHT = 96, 96
 
 XCLK_FREQ = 20_000_000
 
@@ -59,7 +60,7 @@ pixels = neopixel.NeoPixel(
 
 # ── Camera setup ──────────────────────────────────────────────────────────────
 
-i2c = busio.I2C(scl=board.IO5, sda=board.IO4)   # OV2640 config bus
+i2c = board.I2C()   # OV2640 config bus
 
 cam = espcamera.Camera(
     data_pins=board.CAMERA_DATA,
@@ -77,7 +78,7 @@ cam = espcamera.Camera(
 # Discard a few frames so auto-exposure can settle.
 print("Warming up camera …")
 for _ in range(8):
-    cam.take(timeout=1.0)
+    cam.take()
 print(f"Camera ready: {cam.width}×{cam.height} RGB565")
 
 # ── Coordinate mapping ────────────────────────────────────────────────────────
@@ -105,16 +106,16 @@ _crop_left = (FRAME_WIDTH - _crop_w) // 2           # e.g. (96-48)//2 = 24
 _step_x    = max(1, _crop_w    // WIDTH)             # e.g. 48//16 = 3
 _step_y    = max(1, FRAME_HEIGHT // HEIGHT)          # e.g. 96//32 = 3
 
-# Each entry: (led_index, frame_byte_offset)
-# Frame bytes: 2 bytes per pixel, row-major, RGB565 big-endian.
+# Each entry: (led_index, frame_pixel_index)
+# Frame is a uint16 Bitmap: one element per pixel, bytes DMA-swapped (lo=RRRRRGGG, hi=GGGBBBBB).
 _SAMPLE_MAP = []
 for _y in range(HEIGHT):
     _src_y = _y * _step_y
     for _x in range(WIDTH):
         _src_x = _crop_left + _x * _step_x
         _led   = xy_to_index(_x, _y)
-        _byte  = (_src_y * FRAME_WIDTH + _src_x) * 2
-        _SAMPLE_MAP.append((_led, _byte))
+        _pixel = _src_y * FRAME_WIDTH + _src_x
+        _SAMPLE_MAP.append((_led, _pixel))
 
 print(
     f"Sample map: crop {_crop_w}×{FRAME_HEIGHT} "
@@ -125,13 +126,14 @@ print(
 
 def apply_frame(frame):
     """Downsample one RGB565 frame onto the pixel buffer (no show() call)."""
-    for led, byte in _SAMPLE_MAP:
-        hi = frame[byte]
-        lo = frame[byte + 1]
-        # RGB565 big-endian: RRRRRGGG GGGBBBBB
-        r = hi & 0xF8                               # 5-bit R → 8-bit (low bits 0)
-        g = ((hi & 0x07) << 5) | ((lo & 0xE0) >> 3)  # 6-bit G
-        b = (lo & 0x1F) << 3                        # 5-bit B → 8-bit (low bits 0)
+    for led, pixel in _SAMPLE_MAP:
+        px = frame[pixel]
+        # Bitmap stores bytes DMA-order: lo byte first in memory → px low bits = RRRRRGGG
+        hi =  px       & 0xFF
+        lo = (px >> 8) & 0xFF
+        r = hi & 0xF8
+        g = ((hi & 0x07) << 5) | ((lo & 0xE0) >> 3)
+        b = (lo & 0x1F) << 3
         pixels[led] = (r, g, b)
 
 # ── Main loop ─────────────────────────────────────────────────────────────────
@@ -143,7 +145,7 @@ frame_count = 0
 t_report    = time.monotonic()
 
 while True:
-    frame = cam.take(timeout=1.0)
+    frame = cam.take()
     if frame is None:
         print("frame timeout")
         continue

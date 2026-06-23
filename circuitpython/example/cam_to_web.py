@@ -1,24 +1,25 @@
 """
-Camera → MJPEG web stream.
+Camera → multipart BMP web stream.
 
-Connects to WiFi, starts a tiny HTTP server on port 80, and serves a
-continuous MJPEG stream that any browser or VLC can open.
+JPEG pixel format does not work in the espressif_esp32s3_eye CircuitPython
+firmware, so this example captures RGB565 frames and wraps each one in a
+minimal BMP header (BI_BITFIELDS, 16 bpp) before sending.  The raw uint16
+camera buffer bytes are already little-endian RGB565, matching the
+BI_BITFIELDS layout exactly — no per-pixel conversion needed.
+
+Connects to WiFi, starts a tiny HTTP server on port 80.
 
 Access via:
   http://<ip-address>/          (IP printed on the serial console)
   http://esp32cam.local/        (if mDNS works on your network)
 
-Expected throughput: 1–3 fps at QVGA (320×240).
-Bottlenecks are WiFi round-trip latency and CircuitPython's Python-speed
-socket loop — not the camera itself.
-
 WiFi credentials go in CIRCUITPY:/settings.toml — see settings.toml.example.
 """
 
 import os
+import struct
 import time
 import board
-import busio
 import wifi
 import socketpool
 import espcamera
@@ -31,16 +32,17 @@ except ImportError:
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-HOSTNAME     = "esp32cam"     # mDNS name → http://esp32cam.local/
-PORT         = 80
-FRAME_SIZE   = espcamera.FrameSize.QVGA   # 320×240 — good balance of size/speed
-JPEG_QUALITY = 10             # 0 = best, 63 = worst
-XCLK_FREQ    = 20_000_000
+HOSTNAME   = "esp32cam"
+PORT       = 80
+FRAME_SIZE = espcamera.FrameSize.QQVGA   # 160×120
+FRAME_W    = 160
+FRAME_H    = 120
+XCLK_FREQ  = 20_000_000
 
 # ── Camera setup ──────────────────────────────────────────────────────────────
 
 print("Initialising camera ...")
-i2c = busio.I2C(scl=board.IO5, sda=board.IO4)
+i2c = board.I2C()
 
 cam = espcamera.Camera(
     data_pins=board.CAMERA_DATA,
@@ -50,16 +52,40 @@ cam = espcamera.Camera(
     href_pin=board.CAMERA_HREF,
     i2c=i2c,
     external_clock_frequency=XCLK_FREQ,
-    pixel_format=espcamera.PixelFormat.JPEG,
+    pixel_format=espcamera.PixelFormat.RGB565,
     frame_size=FRAME_SIZE,
-    jpeg_quality=JPEG_QUALITY,
     framebuffer_count=2,
 )
 
-# Discard warm-up frames so auto-exposure settles before streaming.
+# cam.colorbar = True
+
+
 for _ in range(8):
-    cam.take(timeout=1.0)
-print(f"Camera ready: {cam.width}x{cam.height} JPEG")
+    cam.take()
+
+print(f"Camera ready: {cam.width}x{cam.height} RGB565")
+
+# ── BMP header (pre-built, constant for every frame) ─────────────────────────
+#
+# 16-bit BI_BITFIELDS BMP: no per-pixel conversion needed because the camera's
+# uint16 buffer bytes are already little-endian RGB565, matching exactly.
+# Positive height → bottom-up BMP row order (camera outputs rows bottom-first).
+
+def _make_bmp_header(w, h):
+    img_bytes = w * h * 2
+    file_size = 66 + img_bytes          # 14 file hdr + 40 DIB hdr + 12 masks
+    return struct.pack(
+        "<2sIHHIIiiHHIIiiIIIII",
+        b"BM", file_size, 0, 0, 66,
+        40, w, h, 1, 16, 3, img_bytes, 0, 0, 0, 0,
+        0xF800, 0x07E0, 0x001F,
+    )
+
+BMP_HEADER      = _make_bmp_header(FRAME_W, FRAME_H)
+BMP_CONTENT_LEN = len(BMP_HEADER) + FRAME_W * FRAME_H * 2
+
+# Row-sized buffer — compute and send one row at a time.
+_row_buf = bytearray(FRAME_W * 2)
 
 # ── WiFi ──────────────────────────────────────────────────────────────────────
 
@@ -84,10 +110,6 @@ if MDNS_AVAILABLE:
 
 # ── Socket helpers ────────────────────────────────────────────────────────────
 
-BOUNDARY = b"frame"
-
-# MJPEG uses multipart HTTP: the browser keeps the connection open and each
-# JPEG is delivered as a new multipart part.
 STREAM_HEADER = (
     b"HTTP/1.1 200 OK\r\n"
     b"Content-Type: multipart/x-mixed-replace;boundary=frame\r\n"
@@ -96,47 +118,86 @@ STREAM_HEADER = (
     b"\r\n"
 )
 
+PART_HEADER = (
+    b"--frame\r\n"
+    b"Content-Type: image/bmp\r\n"
+    b"Content-Length: " + str(BMP_CONTENT_LEN).encode() + b"\r\n"
+    b"\r\n"
+)
+
 def send_all(conn, data):
-    """Send all bytes, looping until done (socket.send may be partial)."""
-    mv    = memoryview(data)
+    if not isinstance(data, (bytes, bytearray)):
+        data = bytes(data)
     total = 0
-    while total < len(mv):
-        sent   = conn.send(mv[total:])
-        total += sent
+    while total < len(data):
+        try:
+            sent = conn.send(data[total:])
+            if not sent:
+                raise OSError("send returned 0")
+            total += sent
+        except OSError as e:
+            if e.args[0] == 11:  # EAGAIN — buffer full, retry
+                continue
+            raise
 
 def read_request(conn):
-    """Read and discard the incoming HTTP request headers."""
-    buf = b""
-    while b"\r\n\r\n" not in buf:
-        chunk = conn.recv(128)
-        if not chunk:
-            break
-        buf += chunk
+    """Read request, return URL path (e.g. '/' or '/frame')."""
+    conn.settimeout(2.0)
+    buf = bytearray(1024)
+    n = 0
+    try:
+        n = conn.recv_into(buf)
+    except OSError:
+        pass
+    conn.settimeout(5.0)
+    try:
+        return bytes(buf[:n]).split(b" ")[1].decode()
+    except Exception:
+        return "/"
+
+def serve_frame(conn):
+    """Serve a single BMP frame — save with curl or browser Save-As."""
+    frame = cam.take()
+    if frame is None:
+        conn.send(b"HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n")
+        return
+    send_all(conn,
+        b"HTTP/1.1 200 OK\r\nContent-Type: image/bmp\r\n"
+        b"Content-Length: " + str(BMP_CONTENT_LEN).encode() + b"\r\n"
+        b"Connection: close\r\n\r\n"
+    )
+    send_all(conn, BMP_HEADER)
+    for y in range(FRAME_H):
+        base = y * FRAME_W
+        for x in range(FRAME_W):
+            px = frame[base + x]
+            _row_buf[x * 2]     = (px >> 8) & 0xFF
+            _row_buf[x * 2 + 1] = px & 0xFF
+        send_all(conn, _row_buf)
 
 def serve_stream(conn):
-    """Send MJPEG frames until the client disconnects or an error occurs."""
     send_all(conn, STREAM_HEADER)
 
     frame_count = 0
     t_start     = time.monotonic()
 
     while True:
-        frame = cam.take(timeout=1.0)
+        frame = cam.take()
         if frame is None:
             continue
 
-        part_header = (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n"
-            b"Content-Length: " + str(len(frame)).encode() + b"\r\n"
-            b"\r\n"
-        )
         try:
-            send_all(conn, part_header)
-            send_all(conn, bytes(frame))   # frame is a memoryview; copy to bytes
+            send_all(conn, PART_HEADER)
+            send_all(conn, BMP_HEADER)
+            for y in range(FRAME_H):
+                base = y * FRAME_W
+                for x in range(FRAME_W):
+                    px = frame[base + x]
+                    _row_buf[x * 2]     = (px >> 8) & 0xFF
+                    _row_buf[x * 2 + 1] = px & 0xFF
+                send_all(conn, _row_buf)
             send_all(conn, b"\r\n")
         except OSError:
-            # Client disconnected.
             break
 
         frame_count += 1
@@ -154,16 +215,20 @@ server.setsockopt(pool.SOL_SOCKET, pool.SO_REUSEADDR, 1)
 server.bind(("", PORT))
 server.listen(1)
 
-print(f"\nStreaming at  http://{ip}/")
-print("Open in a browser or:  vlc http://{ip}/")
+print(f"\nLive stream:   http://{ip}/")
+print(f"Single frame:  http://{ip}/frame  (save as BMP)")
+print(f"VLC:           vlc http://{ip}/")
 print("Press Ctrl-C to stop.\n")
 
 while True:
     try:
         conn, addr = server.accept()
         print(f"Client connected: {addr[0]}")
-        read_request(conn)
-        serve_stream(conn)
+        path = read_request(conn)
+        if path == "/frame":
+            serve_frame(conn)
+        else:
+            serve_stream(conn)
         conn.close()
         print("Client disconnected.")
     except Exception as e:

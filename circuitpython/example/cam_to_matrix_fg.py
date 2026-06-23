@@ -23,14 +23,15 @@ cam_to_matrix.py so you can diff the two files to see exactly what changed.
 
 import time
 import board
-import busio
+import microcontroller
 import neopixel
 import espcamera
 from digitalio import DigitalInOut, Direction, Pull
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-MATRIX_PIN = board.IO14   # GPIO driving the matrix data-in line
+# GPIO14 is the free pin on the left header (board.IO14 not exposed by this firmware)
+MATRIX_PIN = microcontroller.pin.GPIO14
 WIDTH      = 16           # matrix columns
 HEIGHT     = 32           # matrix rows
 
@@ -44,12 +45,12 @@ CURRENT_PER_LED_MA  = 60     # mA per LED at full white, full brightness
 POWER_BUDGET_MA     = 1500   # mA total budget for the matrix (e.g. 1.5 A supply)
 
 # Camera
-FRAME_SIZE   = espcamera.FrameSize.B96X96
-FRAME_WIDTH  = 96
-FRAME_HEIGHT = 96
-# For QQVGA uncomment these two lines instead:
-# FRAME_SIZE   = espcamera.FrameSize.QQVGA
-# FRAME_WIDTH, FRAME_HEIGHT = 160, 120
+FRAME_SIZE   = espcamera.FrameSize.QQVGA
+FRAME_WIDTH  = 160
+FRAME_HEIGHT = 120
+# For B96X96 uncomment these two lines instead (if supported by firmware):
+# FRAME_SIZE   = espcamera.FrameSize.B96X96
+# FRAME_WIDTH, FRAME_HEIGHT = 96, 96
 
 XCLK_FREQ = 20_000_000
 
@@ -74,7 +75,7 @@ def button_pressed():
 
 # ── Camera setup ──────────────────────────────────────────────────────────────
 
-i2c = busio.I2C(scl=board.IO5, sda=board.IO4)
+i2c = board.I2C()
 
 cam = espcamera.Camera(
     data_pins=board.CAMERA_DATA,
@@ -91,7 +92,7 @@ cam = espcamera.Camera(
 
 print("Warming up camera …")
 for _ in range(8):
-    cam.take(timeout=1.0)
+    cam.take()
 print(f"Camera ready: {cam.width}×{cam.height} RGB565")
 
 # ── Coordinate mapping ────────────────────────────────────────────────────────
@@ -111,15 +112,16 @@ _crop_left = (FRAME_WIDTH - _crop_w) // 2
 _step_x    = max(1, _crop_w     // WIDTH)
 _step_y    = max(1, FRAME_HEIGHT // HEIGHT)
 
-# Each entry: (led_index, frame_byte_offset)
+# Each entry: (led_index, frame_pixel_index)
+# Frame is a uint16 Bitmap: one element per pixel, bytes DMA-swapped (lo=RRRRRGGG, hi=GGGBBBBB).
 _SAMPLE_MAP = []
 for _y in range(HEIGHT):
     _src_y = _y * _step_y
     for _x in range(WIDTH):
         _src_x = _crop_left + _x * _step_x
         _led   = xy_to_index(_x, _y)
-        _byte  = (_src_y * FRAME_WIDTH + _src_x) * 2
-        _SAMPLE_MAP.append((_led, _byte))
+        _pixel = _src_y * FRAME_WIDTH + _src_x
+        _SAMPLE_MAP.append((_led, _pixel))
 
 print(
     f"Sample map: crop {_crop_w}×{FRAME_HEIGHT} "
@@ -133,10 +135,11 @@ print(
 
 _background = [(0, 0, 0)] * (WIDTH * HEIGHT)
 
-def _decode_rgb565(frame, byte_offset):
-    """Extract (r, g, b) from an RGB565 frame at the given byte offset."""
-    hi = frame[byte_offset]
-    lo = frame[byte_offset + 1]
+def _decode_rgb565(frame, pixel):
+    """Extract (r, g, b) from a uint16 RGB565 frame at the given pixel index."""
+    px = frame[pixel]
+    hi =  px       & 0xFF
+    lo = (px >> 8) & 0xFF
     r = hi & 0xF8
     g = ((hi & 0x07) << 5) | ((lo & 0xE0) >> 3)
     b = (lo & 0x1F) << 3
@@ -157,11 +160,11 @@ def capture_background():
     accum = [[0, 0, 0] for _ in range(WIDTH * HEIGHT)]
 
     for _ in range(BG_CAPTURE_FRAMES):
-        frame = cam.take(timeout=1.0)
+        frame = cam.take()
         if frame is None:
             continue
-        for led, byte in _SAMPLE_MAP:
-            r, g, b = _decode_rgb565(frame, byte)
+        for led, pixel in _SAMPLE_MAP:
+            r, g, b = _decode_rgb565(frame, pixel)
             accum[led][0] += r
             accum[led][1] += g
             accum[led][2] += b
@@ -204,8 +207,8 @@ def apply_frame_foreground(frame):
     Returns the number of lit (foreground) pixels.
     """
     lit = 0
-    for led, byte in _SAMPLE_MAP:
-        r, g, b = _decode_rgb565(frame, byte)
+    for led, pixel in _SAMPLE_MAP:
+        r, g, b = _decode_rgb565(frame, pixel)
 
         br, bg, bb = _background[led]
         diff = abs(r - br) + abs(g - bg) + abs(b - bb)
@@ -242,7 +245,7 @@ while True:
         while button_pressed():
             time.sleep(0.05)
 
-    frame = cam.take(timeout=1.0)
+    frame = cam.take()
     if frame is None:
         print("frame timeout")
         continue
