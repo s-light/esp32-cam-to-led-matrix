@@ -1,15 +1,24 @@
 """
 Camera → LED matrix, foreground-only with power cap — desktop version of
-circuitpython/example/cam_to_matrix_fg.py.
+circuitpython/CIRCUITPY_disc/main.py.
+
+Runs against a live webcam (default) or a recorded board camera video (see
+video_source.py):
+
+    python cam_to_matrix_fg.py            # webcam index 0
+    python cam_to_matrix_fg.py 1          # webcam index 1
+    python cam_to_matrix_fg.py rec_0000.rawvid   # recorded board footage
+
+The foreground-extraction algorithm (background subtraction, contrast LUT,
+grayscale) lives in circuitpython/CIRCUITPY_disc/cam_algo.py and is imported
+from there (see the sys.path shim below), so this script and the on-device
+main.py always run identical logic — a change tested here ports to the board
+with no translation step.
 
 Side-by-side window shows three panels:
   Left   — camera feed with crop zone outlined
   Centre — background reference (what was captured)
   Right  — LED matrix simulation (foreground pixels only)
-
-Background subtraction uses numpy array ops instead of a Python pixel loop,
-which is substantially faster on the desktop.  The logic and constants are
-otherwise identical to the CircuitPython version.
 
 Controls
 --------
@@ -17,107 +26,145 @@ Controls
   Space / B  recapture background
 """
 
+import sys
 import time
+from pathlib import Path
+
 import cv2
 import numpy as np
+
 from led_simulator import LedMatrix, make_label, side_by_side
+from video_source import open_source
+
+sys.path.insert(
+    0, str(Path(__file__).resolve().parent.parent / "circuitpython" / "CIRCUITPY_disc")
+)
+import cam_algo  # noqa: E402 — path shim above must run first
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-CAMERA_INDEX  = 0
-FRAME_WIDTH   = 160
-FRAME_HEIGHT  = 120
-WIDTH         = 16
-HEIGHT        = 32
+SOURCE = sys.argv[1] if len(sys.argv) > 1 else 0
+WIDTH = 16
+HEIGHT = 32
 WARMUP_FRAMES = 8
 
 # Background subtraction
-DIFF_THRESHOLD    = 30    # 0–765 (sum of per-channel abs diff); lower = more sensitive
-BG_CAPTURE_FRAMES = 6     # frames averaged for the background reference
+DIFF_THRESHOLD = 30  # 0–765 (sum of per-channel abs diff); lower = more sensitive
+BG_CAPTURE_FRAMES = 6  # frames averaged for the background reference
+
+# Contrast correction (applied to foreground pixels only)
+CONTRAST_FACTOR = 1.5
+BRIGHTNESS_OFFSET = 10
+
+# Grayscale / monochrome mode
+GRAYSCALE_MODE = True
+GRAY_COLOR = (0, 255, 0)
 
 # Power cap
-MAX_BRIGHTNESS     = 0.90   # absolute ceiling (desktop: can go higher than hardware)
-CURRENT_PER_LED_MA = 60     # mA per LED at full white
-POWER_BUDGET_MA    = 1500   # target max current for the matrix
+MAX_BRIGHTNESS = 0.90  # absolute ceiling (desktop: can go higher than hardware)
+CURRENT_PER_LED_MA = 60  # mA per LED at full white
+POWER_BUDGET_MA = 1500  # target max current for the matrix
 
 # ── Matrix and camera setup ───────────────────────────────────────────────────
 
-matrix = LedMatrix(WIDTH, HEIGHT, brightness=MAX_BRIGHTNESS,
-                   window_title="Cam -> Matrix (FG)")
+matrix = LedMatrix(
+    WIDTH, HEIGHT, brightness=MAX_BRIGHTNESS, window_title="Cam -> Matrix (FG)"
+)
 
-cap = cv2.VideoCapture(CAMERA_INDEX)
+cap = open_source(SOURCE)
 if not cap.isOpened():
-    raise RuntimeError(f"Could not open camera index {CAMERA_INDEX}")
+    raise RuntimeError(f"Could not open source {SOURCE!r}")
 
-cap.set(cv2.CAP_PROP_FRAME_WIDTH,  FRAME_WIDTH)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 160)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 120)
 
-actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-print(f"Camera: requested {FRAME_WIDTH}x{FRAME_HEIGHT}, got {actual_w}x{actual_h}")
+actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 160
+actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 120
+print(f"Source: {SOURCE!r} — {actual_w}x{actual_h}")
 
 print("Warming up ...")
 for _ in range(WARMUP_FRAMES):
     cap.read()
 
-# ── Crop helpers ──────────────────────────────────────────────────────────────
+_CONTRAST_LUT = cam_algo.build_contrast_lut(CONTRAST_FACTOR, BRIGHTNESS_OFFSET)
+_SAMPLE_MAP = cam_algo.build_sample_map(actual_w, actual_h, WIDTH, HEIGHT)
+
+# ── Crop helpers (for the camera preview panel only) ──────────────────────────
+
 
 def compute_crop(frame_w, frame_h):
-    crop_w  = frame_h // 2
+    crop_w = frame_h // 2
     x_start = (frame_w - crop_w) // 2
     return x_start, x_start + crop_w
 
-def get_small(frame):
-    """Return a WIDTH×HEIGHT RGB float32 crop of the frame (0–255)."""
-    h, w = frame.shape[:2]
-    x0, x1 = compute_crop(w, h)
-    crop  = frame[:, x0:x1]
-    small = cv2.resize(crop, (WIDTH, HEIGHT), interpolation=cv2.INTER_AREA)
-    return small.astype(np.float32)
 
 def annotate_camera(frame):
     out = frame.copy()
     h, w = out.shape[:2]
     x0, x1 = compute_crop(w, h)
     cv2.rectangle(out, (x0, 0), (x1, h - 1), (0, 220, 0), 2)
-    cv2.putText(out, "crop", (x0 + 4, 18),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 220, 0), 1, cv2.LINE_AA)
+    cv2.putText(
+        out,
+        "crop",
+        (x0 + 4, 18),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        (0, 220, 0),
+        1,
+        cv2.LINE_AA,
+    )
     return out
 
-# ── Background reference ──────────────────────────────────────────────────────
-#
-# Stored as a float32 numpy array of shape (HEIGHT, WIDTH, 3) in BGR.
-# float32 lets us accumulate frames for averaging without overflow.
 
-_background = np.zeros((HEIGHT, WIDTH, 3), dtype=np.float32)
+# ── Background reference ──────────────────────────────────────────────────────
+
+_background = [(0, 0, 0)] * (WIDTH * HEIGHT)
+
+
+def _frame_sample_fn(frame):
+    def sample_fn(x, y):
+        b, g, r = frame[y, x]
+        return int(r), int(g), int(b)
+
+    return sample_fn
+
+
+def _next_frame_sample_fn():
+    ret, frame = cap.read()
+    while not ret:
+        ret, frame = cap.read()
+    return _frame_sample_fn(frame)
+
 
 def capture_background():
-    """Average BG_CAPTURE_FRAMES frames into _background."""
     global _background
 
-    # Brief white flash on the matrix to signal capture.
     matrix.fill((60, 60, 60))
     matrix.show()
     time.sleep(0.1)
 
-    accum = np.zeros((HEIGHT, WIDTH, 3), dtype=np.float32)
-    captured = 0
-    while captured < BG_CAPTURE_FRAMES:
-        ret, frame = cap.read()
-        if not ret:
-            continue
-        accum += get_small(frame)
-        captured += 1
-
-    _background = accum / BG_CAPTURE_FRAMES
+    _background = cam_algo.capture_background(
+        _next_frame_sample_fn, _SAMPLE_MAP, BG_CAPTURE_FRAMES
+    )
 
     matrix.fill((0, 0, 0))
     matrix.show()
     print("Background captured.")
 
+
+def background_preview():
+    """Return a display-ready BGR uint8 image of the current background."""
+    img = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)
+    for led, dx, dy, _sx, _sy in _SAMPLE_MAP:
+        r, g, b = _background[led]
+        img[dy, dx] = (b, g, r)
+    return cv2.resize(img, (WIDTH * 8, HEIGHT * 8), interpolation=cv2.INTER_NEAREST)
+
+
 # ── Power cap ─────────────────────────────────────────────────────────────────
 
 _BUDGET_PX = POWER_BUDGET_MA / CURRENT_PER_LED_MA
+
 
 def apply_power_cap(lit_count):
     if lit_count == 0:
@@ -126,40 +173,35 @@ def apply_power_cap(lit_count):
     needed = lit_count / _BUDGET_PX
     matrix.brightness = min(MAX_BRIGHTNESS, MAX_BRIGHTNESS / max(needed, 1.0))
 
+
 # ── Frame processing ──────────────────────────────────────────────────────────
 
-def apply_frame_foreground(frame):
-    """Subtract background, mask near-background pixels, fill matrix.
+
+def render_frame(frame):
+    """Run the shared algorithm and push the result into the matrix simulator.
 
     Returns the number of lit (foreground) pixels.
-    Uses numpy operations instead of a Python pixel loop for speed.
     """
-    small = get_small(frame)   # float32 BGR, shape (H, W, 3)
-
-    # Per-pixel Manhattan distance across all three channels.
-    diff = np.sum(np.abs(small - _background), axis=2)   # shape (H, W)
-    mask = diff >= DIFF_THRESHOLD                          # True = foreground
-
-    lit = int(np.count_nonzero(mask))
-
-    for y in range(HEIGHT):
-        for x in range(WIDTH):
-            if mask[y, x]:
-                b, g, r = small[y, x]
-                matrix.set_pixel(x, y, (int(r), int(g), int(b)))
-            else:
-                matrix.set_pixel(x, y, (0, 0, 0))
-
+    results, lit = cam_algo.apply_foreground(
+        _frame_sample_fn(frame),
+        _SAMPLE_MAP,
+        _background,
+        DIFF_THRESHOLD,
+        contrast_lut=_CONTRAST_LUT,
+        grayscale=GRAYSCALE_MODE,
+        gray_color=GRAY_COLOR,
+    )
+    for led, r, g, b in results:
+        matrix[led] = (r, g, b)
     return lit
 
-def background_preview():
-    """Return a display-ready BGR uint8 image of the current background."""
-    bg_uint8 = np.clip(_background, 0, 255).astype(np.uint8)
-    # Scale up to a visible size while keeping pixel-perfect look.
-    return cv2.resize(bg_uint8, (WIDTH * 8, HEIGHT * 8), interpolation=cv2.INTER_NEAREST)
 
 # ── Startup ───────────────────────────────────────────────────────────────────
 
+mode_label = f"grayscale {GRAY_COLOR}" if GRAYSCALE_MODE else "colour"
+print(
+    f"Mode: {mode_label}  |  contrast ×{CONTRAST_FACTOR}  offset {BRIGHTNESS_OFFSET:+d}"
+)
 print("Capturing initial background — keep the scene empty …")
 capture_background()
 print(f"Power budget: {POWER_BUDGET_MA} mA → max ~{int(_BUDGET_PX)} fully-lit pixels")
@@ -168,7 +210,7 @@ print("Press Space or B to recapture background, Q to quit.")
 # ── Main loop ─────────────────────────────────────────────────────────────────
 
 frame_count = 0
-t_report    = time.time()
+t_report = time.time()
 
 while True:
     ret, frame = cap.read()
@@ -176,12 +218,12 @@ while True:
         print("capture failed")
         continue
 
-    lit = apply_frame_foreground(frame)
+    lit = render_frame(frame)
     apply_power_cap(lit)
 
-    cam_panel    = make_label(annotate_camera(frame), "Camera")
-    bg_panel     = make_label(background_preview(),   "Background ref")
-    matrix_panel = make_label(matrix.render(),        "LED Matrix (FG only)")
+    cam_panel = make_label(annotate_camera(frame), "Camera")
+    bg_panel = make_label(background_preview(), "Background ref")
+    matrix_panel = make_label(matrix.render(), "LED Matrix (FG only)")
 
     cv2.imshow("Cam -> Matrix (FG)", side_by_side(cam_panel, bg_panel, matrix_panel))
 
@@ -194,12 +236,12 @@ while True:
             f"~{int(lit * CURRENT_PER_LED_MA * matrix.brightness)} mA"
         )
         frame_count = 0
-        t_report    = now
+        t_report = now
 
     key = cv2.waitKey(1) & 0xFF
-    if key == ord('q'):
+    if key == ord("q"):
         break
-    if key in (ord(' '), ord('b')):
+    if key in (ord(" "), ord("b")):
         print("Recapturing background …")
         capture_background()
 

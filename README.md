@@ -24,7 +24,18 @@ lit — keeping power draw low enough for small USB or lab supplies.
 | ------------------------------------------------ | ---------------------------- | --------------------------------------------------------------------------------- |
 | `circuitpython/example/`                        | CircuitPython on the board  | Camera → SD card, matrix test patterns, live cam → matrix, foreground + power cap |
 | `circuitpython/example_xiao_esp32s3_sense/`     | CircuitPython on the board  | Same, ported for the XIAO ESP32S3 Sense (untested, see board table below)         |
-| `pythonOpenCV/`                                 | Desktop Python + OpenCV     | Same examples running on a PC webcam with an LED matrix simulator (glow effect)   |
+| `pythonOpenCV/`                                 | Desktop Python + OpenCV     | Same examples running on a PC webcam (or a recorded `.rawvid` clip, see `video_source.py`) with an LED matrix simulator (glow effect) |
+| `circuitpython/CIRCUITPY_disc/`                 | CircuitPython on the board  | The actual deployed on-device script (`main.py`), not a teaching example — see below |
+
+`circuitpython/example/camera_record_video.py` records raw camera frames to
+the SD card so the algorithm can be developed on a laptop against real board
+footage (sensor noise included) without everyone needing the hardware —
+see its README for the file format and playback via `video_source.py`.
+
+`main.py` and `pythonOpenCV/cam_to_matrix_fg.py` both import their
+foreground-extraction algorithm from `circuitpython/CIRCUITPY_disc/cam_algo.py`
+(a single pure-Python module, no numpy) so a change tested on a laptop ports
+to the board with no translation step.
 
 ### Board variants (CircuitPython)
 
@@ -83,6 +94,20 @@ python camera_fg.py         # plain camera preview
 python cam_to_matrix.py       # live cam mapped to LED matrix simulator
 python cam_to_matrix_fg.py    # foreground-only + power cap (Space to recapture background)
 ```
+
+## Known limitations
+
+- **Background subtraction assumes a fixed camera.** Once a background
+  reference is captured, any shift in the camera's physical mounting — even
+  a millimetre — invalidates every pixel at once, since the live frame no
+  longer lines up with the stored reference; the whole image can suddenly
+  read as foreground. Mount the board rigidly (screws, glue, or a printed
+  bracket) rather than tape or a loose clip. The recapture button works
+  around occasional bumps, but a wobbly mount fighting the algorithm on
+  every frame is not something thresholding can fix. If the mount can't be
+  made rigid, frame-to-frame differencing is a more robust (but different
+  trade-off) alternative — see "What is *not* here" in
+  `circuitpython/example/cam_to_matrix_fg.md`.
 
 ## HW
 
