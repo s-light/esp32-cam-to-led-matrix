@@ -287,3 +287,8 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# recorded camera clips (see pythonOpenCV/record_to_rawvid.py) — keep the
+# folder itself via the marker file, ignore everything else in it
+pythonOpenCV/records/*
+!pythonOpenCV/records/.gitkeep

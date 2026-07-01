@@ -1,0 +1,4 @@
+Recordings (.rawvid) produced by record_to_rawvid.py and copied from the
+board's SD card (see ../../circuitpython/example/camera_record_video.md)
+live here. This folder's contents are gitignored except this marker file,
+so the folder itself survives a fresh checkout even when empty.

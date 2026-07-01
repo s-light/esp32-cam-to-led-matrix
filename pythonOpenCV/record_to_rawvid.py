@@ -18,6 +18,12 @@ Usage
     python record_to_rawvid.py out.rawvid                # explicit filename
     python record_to_rawvid.py --seconds 20               # auto-stop after 20s
 
+Recordings are written into RECORDS_DIR (default: records/, next to this
+script) — it's gitignored except for a marker file, so clips don't clutter
+`git status` but the folder itself still exists after a fresh checkout. Pass
+a path containing a directory separator (e.g. `other/out.rawvid`) to write
+somewhere else instead.
+
 With no filename given, the recording is auto-named
 `rec_<start-timestamp>_<duration>s.rawvid` — the timestamp is stamped when
 recording starts, the duration is filled in once it stops (it isn't known
@@ -41,6 +47,7 @@ import numpy as np
 FRAME_WIDTH = 160
 FRAME_HEIGHT = 120
 WARMUP_FRAMES = 8
+RECORDS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "records")
 
 _MAGIC = b"RVID"
 _HEADER_FMT = "<4sHHBBI"  # magic, width, height, pixel_format, reserved, frame_count
@@ -100,10 +107,21 @@ def main():
         cap.read()
 
     auto_name = args.output is None
+    if auto_name:
+        target_dir = RECORDS_DIR
+    elif os.path.dirname(args.output):
+        target_dir = os.path.dirname(args.output)  # explicit path — respect it as-is
+    else:
+        target_dir = RECORDS_DIR  # bare filename — still goes into RECORDS_DIR
+    os.makedirs(target_dir, exist_ok=True)
+
     start_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     # Duration isn't known until recording stops, so auto-named recordings
     # are written under a temporary name and renamed at the end.
-    write_path = args.output if not auto_name else f".rec_{start_stamp}.rawvid.tmp"
+    if auto_name:
+        write_path = os.path.join(target_dir, f".rec_{start_stamp}.rawvid.tmp")
+    else:
+        write_path = os.path.join(target_dir, os.path.basename(args.output))
 
     print(
         f"Recording to {'an auto-named file' if auto_name else write_path} — press Q to stop early …"
@@ -173,7 +191,7 @@ def main():
 
     duration_s = round(time.time() - t_start)
     if auto_name:
-        final_path = f"rec_{start_stamp}_{duration_s}s.rawvid"
+        final_path = os.path.join(target_dir, f"rec_{start_stamp}_{duration_s}s.rawvid")
         os.rename(write_path, final_path)
     else:
         final_path = write_path
