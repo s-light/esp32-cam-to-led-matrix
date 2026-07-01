@@ -27,9 +27,24 @@ lit — keeping power draw low enough for small USB or lab supplies.
 
 ### Board variant (CircuitPython)
 
-Flash **`espressif_esp32s3_eye`** from [circuitpython.org](https://circuitpython.org/board/espressif_esp32s3_eye/) —
-all camera GPIOs match the ESP32-S3-CAM pinout exactly.
-See `esp32-s3-cam_pinout.md` / `.svg` for the full pin reference.
+Two boards are supported:
+
+- **`espressif_esp32s3_eye`** from [circuitpython.org](https://circuitpython.org/board/espressif_esp32s3_eye/) —
+  for the ESP32-S3-CAM. All camera GPIOs match the ESP32-S3-CAM pinout exactly.
+  See `esp32-s3-cam_pinout.md` / `.svg` for the full pin reference.
+- **`esp32-wrover-dev-cam`** from [circuitpython.org](https://circuitpython.org/board/esp32-wrover-dev-cam/) —
+  for the Freenove ESP32-WROVER CAM Dev Board.
+
+Both boards expose the camera through the same generic `board.CAMERA_*` names and
+`board.I2C()`, so the streaming examples (`cam_test.py`, `cam_to_web*.py`,
+`cam_to_matrix*.py`) run unchanged on either board. The recapture button in
+`cam_to_matrix_fg*.py` is addressed via `microcontroller.pin.GPIO0` rather than
+`board.BOOT`/`board.BUTTON`, since the two boards name that pin differently.
+
+`camera_to_sd.py` is written for the ESP32-S3-CAM's onboard microSD pins and does
+not carry over as-is to the Freenove board. If your Freenove board revision has an
+SD slot, check its silkscreen — some revisions wire it to GPIO14, which this
+project uses for the LED matrix data line.
 
 ### Quick start (desktop)
 

@@ -102,9 +102,12 @@ pixels = neopixel.NeoPixel(
     pixel_order=neopixel.GRB,
 )
 
-# ── Button setup (BOOT = GPIO0, active-low) ───────────────────────────────────
+# ── Button setup (GPIO0, active-low) ──────────────────────────────────────────
+# Addressed via microcontroller.pin so this works whether the board exposes it
+# as board.BOOT (e.g. espressif_esp32s3_eye) or board.BUTTON (e.g. Freenove
+# ESP32-WROVER-DEV-CAM) — both name the same physical pin.
 
-btn = DigitalInOut(board.BOOT)
+btn = DigitalInOut(microcontroller.pin.GPIO0)
 btn.direction = Direction.INPUT
 btn.pull = Pull.UP
 
@@ -281,7 +284,7 @@ print(f"Mode: {mode_label}  |  contrast ×{CONTRAST_FACTOR}  offset {BRIGHTNESS_
 print("Capturing initial background …")
 capture_background()
 print(f"Power budget: {POWER_BUDGET_MA} mA → max ~{int(_BUDGET_PX)} fully-lit pixels")
-print("Press BOOT button to recapture background.")
+print("Press button to recapture background.")
 
 # ── Main loop ─────────────────────────────────────────────────────────────────
 
