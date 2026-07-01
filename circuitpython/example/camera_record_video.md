@@ -50,10 +50,11 @@ offset  size  field
 8       1     pixel_format   (uint8 — 0 = RGB565)
 9       1     reserved
 10      4     frame_count    (uint32, little-endian)
-14      —     frame data: frame_count × (width × height × 2 bytes)
+14      4     duration_ms    (uint32, little-endian — wall-clock recording time)
+18      —     frame data: frame_count × (width × height × 2 bytes)
 ```
 
-Struct format string: `"<4sHHBBI"` (14-byte header), usable unchanged from
+Struct format string: `"<4sHHBBII"` (18-byte header), usable unchanged from
 both CircuitPython's `struct` module and desktop Python's.
 
 Each frame is `width × height` RGB565 pixels, written verbatim from the
@@ -67,12 +68,18 @@ high byte holds `GGGBBBBB` (see `memory/hw_findings.md`). Both
 `pythonOpenCV/video_source.py`'s `RecordingSource._decode()` account for
 this — don't reorder the bytes when reading the file elsewhere.
 
-`frame_count` is written as `0` when recording starts and is only filled in
-correctly once recording stops cleanly (the script seeks back and rewrites
-the header). A recording interrupted by a power loss will have
-`frame_count == 0` in its header even though frame data follows — if you
-need to recover one, ignore the header and read `(file_size - 14) //
-(width * height * 2)` frames instead.
+`frame_count` and `duration_ms` are both written as `0` when recording
+starts and are only filled in correctly once recording stops cleanly (the
+script seeks back and rewrites the header). `duration_ms` is what lets
+`pythonOpenCV/led_simulator.py`'s standalone playback demo pace itself to
+the recording's actual capture rate (`frame_count / (duration_ms / 1000)`)
+instead of replaying as fast as the CPU allows.
+
+A recording interrupted by a power loss will have `frame_count == 0` and
+`duration_ms == 0` in its header even though frame data follows — if you
+need to recover one, ignore the header and read `(file_size - 18) //
+(width * height * 2)` frames instead; playback will fall back to
+best-effort speed since the true duration is unrecoverable.
 
 ## Tuning
 

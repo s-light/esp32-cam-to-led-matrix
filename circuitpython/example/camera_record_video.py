@@ -31,7 +31,8 @@ XCLK_FREQ = 20_000_000
 MAX_RECORD_SECONDS = 60
 
 _MAGIC = b"RVID"
-_HEADER_FMT = "<4sHHBBI"  # magic, width, height, pixel_format, reserved, frame_count
+# magic, width, height, pixel_format, reserved, frame_count, duration_ms
+_HEADER_FMT = "<4sHHBBII"
 _PIXEL_FORMAT_RGB565 = 0
 
 # ── SD card ──────────────────────────────────────────────────────────────────
@@ -107,7 +108,8 @@ while True:
     print(f"Recording to {filename} — press BOOT again to stop …")
 
     with open(filename, "wb") as f:
-        # Placeholder header — frame_count is filled in once recording stops.
+        # Placeholder header — frame_count and duration_ms are filled in once
+        # recording stops (neither is known up front).
         f.write(
             struct.pack(
                 _HEADER_FMT,
@@ -115,6 +117,7 @@ while True:
                 FRAME_WIDTH,
                 FRAME_HEIGHT,
                 _PIXEL_FORMAT_RGB565,
+                0,
                 0,
                 0,
             )
@@ -145,6 +148,8 @@ while True:
                 print(f"  {frame_count} frames  |  {fps:.1f} fps avg")
                 t_report = now
 
+        duration_ms = round((time.monotonic() - t_start) * 1000)
+
         f.flush()
         f.seek(0)
         f.write(
@@ -156,8 +161,9 @@ while True:
                 _PIXEL_FORMAT_RGB565,
                 0,
                 frame_count,
+                duration_ms,
             )
         )
 
-    print(f"Saved {frame_count} frames to {filename}")
+    print(f"Saved {frame_count} frames ({duration_ms / 1000:.1f}s) to {filename}")
     print("Press BOOT to record another clip …")

@@ -50,7 +50,8 @@ WARMUP_FRAMES = 8
 RECORDS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "records")
 
 _MAGIC = b"RVID"
-_HEADER_FMT = "<4sHHBBI"  # magic, width, height, pixel_format, reserved, frame_count
+# magic, width, height, pixel_format, reserved, frame_count, duration_ms
+_HEADER_FMT = "<4sHHBBII"
 _PIXEL_FORMAT_RGB565 = 0
 
 
@@ -128,6 +129,8 @@ def main():
     )
 
     with open(write_path, "wb") as f:
+        # Placeholder header — frame_count and duration_ms are filled in once
+        # recording stops (neither is known up front).
         f.write(
             struct.pack(
                 _HEADER_FMT,
@@ -135,6 +138,7 @@ def main():
                 FRAME_WIDTH,
                 FRAME_HEIGHT,
                 _PIXEL_FORMAT_RGB565,
+                0,
                 0,
                 0,
             )
@@ -175,6 +179,8 @@ def main():
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
 
+        duration_ms = round((time.time() - t_start) * 1000)
+
         f.flush()
         f.seek(0)
         f.write(
@@ -186,10 +192,11 @@ def main():
                 _PIXEL_FORMAT_RGB565,
                 0,
                 frame_count,
+                duration_ms,
             )
         )
 
-    duration_s = round(time.time() - t_start)
+    duration_s = round(duration_ms / 1000)
     if auto_name:
         final_path = os.path.join(target_dir, f"rec_{start_stamp}_{duration_s}s.rawvid")
         os.rename(write_path, final_path)

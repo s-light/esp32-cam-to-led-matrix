@@ -22,7 +22,8 @@ import cv2
 import numpy as np
 
 _MAGIC = b"RVID"
-_HEADER_FMT = "<4sHHBBI"  # magic, width, height, pixel_format, reserved, frame_count
+# magic, width, height, pixel_format, reserved, frame_count, duration_ms
+_HEADER_FMT = "<4sHHBBII"
 _HEADER_SIZE = struct.calcsize(_HEADER_FMT)
 _PIXEL_FORMAT_RGB565 = 0
 
@@ -44,8 +45,8 @@ class RecordingSource:
     def __init__(self, path):
         self._file = open(path, "rb")
         header = self._file.read(_HEADER_SIZE)
-        magic, width, height, pixel_format, _reserved, frame_count = struct.unpack(
-            _HEADER_FMT, header
+        magic, width, height, pixel_format, _reserved, frame_count, duration_ms = (
+            struct.unpack(_HEADER_FMT, header)
         )
         if magic != _MAGIC:
             raise ValueError(f"{path} is not a .rawvid recording (bad magic)")
@@ -55,8 +56,18 @@ class RecordingSource:
         self.width = width
         self.height = height
         self.frame_count = frame_count
+        self.duration_ms = duration_ms
         self._frame_bytes = width * height * 2
         self._data_start = _HEADER_SIZE
+
+    @property
+    def fps(self):
+        """Average capture rate, or None if the recording doesn't say (e.g. it
+        was interrupted before its header could be finalized — see
+        camera_record_video.md)."""
+        if self.duration_ms <= 0 or self.frame_count <= 0:
+            return None
+        return self.frame_count / (self.duration_ms / 1000)
 
     def get(self, prop_id):
         if prop_id == cv2.CAP_PROP_FRAME_WIDTH:
