@@ -6,6 +6,11 @@ board camera footage — including its actual sensor noise — instead of a
 laptop webcam. Only one person needs the hardware in front of them; everyone
 else works from a recording.
 
+For quick tests without the board at all, `pythonOpenCV/record_to_rawvid.py`
+captures the same `.rawvid` format from a laptop webcam instead — handy for
+drafting a clip, but real board footage is noisier and dimmer, so prefer an
+actual board recording once one is available.
+
 ## Board variant & wiring
 
 Same as `camera_to_sd.py` — see `camera_to_sd.md` for the full pin table.
