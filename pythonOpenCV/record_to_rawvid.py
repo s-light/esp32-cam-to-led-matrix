@@ -48,6 +48,7 @@ FRAME_WIDTH = 160
 FRAME_HEIGHT = 120
 WARMUP_FRAMES = 8
 RECORDS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "records")
+DISPLAY_SCALE = 3  # preview window only — the recorded/encoded frame is untouched
 
 _MAGIC = b"RVID"
 # magic, width, height, pixel_format, reserved, frame_count, duration_ms
@@ -74,6 +75,34 @@ def encode_rgb565(frame_bgr):
     byte1 = (((g6 & 0x07) << 5) | b5).astype(np.uint8)  # GGGBBBBB
 
     return np.dstack([byte0, byte1]).tobytes()  # matches the board's on-wire byte order
+
+
+def annotate_preview(frame):
+    """Outline the 1:2 crop zone that cam_algo's sample map will actually use.
+
+    Same rectangle/label convention as annotate_camera() in cam_to_matrix.py
+    and cam_to_matrix_fg.py, so the framing looks familiar across scripts —
+    this just shows it during recording instead of live foreground viewing.
+    """
+    out = frame.copy()
+    h, w = out.shape[:2]
+    crop_w = h // 2
+    x0 = (w - crop_w) // 2
+    x1 = x0 + crop_w
+    cv2.rectangle(out, (x0, 0), (x1, h - 1), (0, 220, 0), 2)
+    cv2.putText(
+        out,
+        "crop",
+        (x0 + 4, 18),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        (0, 220, 0),
+        1,
+        cv2.LINE_AA,
+    )
+    return cv2.resize(
+        out, (w * DISPLAY_SCALE, h * DISPLAY_SCALE), interpolation=cv2.INTER_NEAREST
+    )
 
 
 def parse_args():
@@ -159,7 +188,7 @@ def main():
 
                 f.write(encode_rgb565(frame))
                 frame_count += 1
-                cv2.imshow("Recording - press Q to stop", frame)
+                cv2.imshow("Recording - press Q to stop", annotate_preview(frame))
             else:
                 print("capture failed")
 
