@@ -63,7 +63,7 @@ GRAY_COLOR = (0, 255, 0)
 # Power cap
 MAX_BRIGHTNESS = 0.90  # absolute ceiling (desktop: can go higher than hardware)
 CURRENT_PER_LED_MA = 60  # mA per LED at full white
-POWER_BUDGET_MA = 1500  # target max current for the matrix
+POWER_BUDGET_MA = 2100  # current bench PSU rating; raise once a higher-capacity PSU is in use
 
 # ── Matrix and camera setup ───────────────────────────────────────────────────
 
