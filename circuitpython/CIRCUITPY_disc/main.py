@@ -41,7 +41,7 @@ GRAY_COLOR = (0, 255, 0)
 # Power management
 MAX_BRIGHTNESS = 0.30
 CURRENT_PER_LED_MA = 60
-POWER_BUDGET_MA = 2100  # current bench PSU rating; raise once a higher-capacity PSU is in use
+POWER_BUDGET_MA = 2100  # current bench PSU rating (a higher-capacity PSU is planned)
 
 # Camera
 FRAME_SIZE = espcamera.FrameSize.QQVGA
